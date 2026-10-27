@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+
+# Local lakehouse (rebuilt by the pipeline)
+lakehouse/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Databricks / Terraform
+.databricks/
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Env / IDE / OS
+.env
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

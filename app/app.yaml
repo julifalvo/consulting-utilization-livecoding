@@ -1,0 +1,9 @@
+# Databricks Apps runtime config. Resources named here are declared in resources/utilization_app.yml
+command: ["uvicorn", "dashboard.main:app", "--host", "0.0.0.0", "--port", "8000"]
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: ANTHROPIC_API_KEY
+    valueFrom: anthropic-api-key
+  - name: UTIL_CATALOG
+    value: prod

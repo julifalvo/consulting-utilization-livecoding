@@ -1,0 +1,11 @@
+engagement_code,client_name,billing_type,currency
+ENG-001,Northwind Bank,TM,USD
+ENG-002,Halcyon Retail,TM,GBP
+ENG-003,Brightline Energy,FIXED,EUR
+ENG-004,Meridian Insurance,TM,USD
+ENG-005,Solace Telecom,TM,EUR
+ENG-006,Verdant Pharma,FIXED,GBP
+ENG-007,Ironclad Logistics,TM,USD
+ENG-008,Lumen Media,TM,GBP
+INT-001,Internal - Training,INTERNAL,USD
+INT-002,Internal - Business Development,INTERNAL,USD

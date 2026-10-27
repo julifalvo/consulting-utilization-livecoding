@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utilization Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f4f3ef;
+    --surface-1: #fcfcfb;
+    --border: #e2e0d8;
+    --grid: #ecebe5;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7973;
+    --series-1: #2a78d6;
+    --target: #0b0b0b;
+    --warning: #a35f00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-0: #111110;
+      --surface-1: #1a1a19;
+      --border: #2e2e2c;
+      --grid: #262624;
+      --text-primary: #f0efec;
+      --text-secondary: #c3c2b7;
+      --text-muted: #94938b;
+      --series-1: #3987e5;
+      --target: #f0efec;
+      --warning: #e0a040;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2e2c; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #94938b;
+    --series-1: #3987e5; --target: #f0efec; --warning: #e0a040;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--surface-0); color: var(--text-primary);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 4px; }
+  .sub { color: var(--text-secondary); margin: 2px 0 0; }
+  .filters { display: flex; gap: 8px; align-items: center; color: var(--text-secondary); }
+  select, input, button {
+    font: inherit; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+  }
+  button { cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+  .note { color: var(--text-muted); font-size: 12px; margin: 0 0 12px; }
+  .bars { display: grid; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 110px 1fr 52px; gap: 8px; align-items: center; }
+  .bar-label { color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { position: relative; height: 22px; }
+  .track::before { content: ""; position: absolute; inset: 10px 0; background: var(--grid); border-radius: 2px; }
+  .fill { position: absolute; left: 0; top: 4px; height: 14px; background: var(--series-1); border-radius: 0 4px 4px 0; }
+  .target { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--target); opacity: .55; }
+  .bar-value { text-align: right; font-variant-numeric: tabular-nums; }
+  .bar-row:hover .fill { filter: brightness(1.1); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); }
+  th { color: var(--text-muted); font-weight: 500; font-size: 12px; }
+  td.num, th.num { text-align: right; }
+  td:first-child { white-space: nowrap; }
+  .scroll { overflow-x: auto; }
+  .flag { color: var(--warning); white-space: nowrap; }
+  .ask { display: flex; gap: 8px; margin-top: 8px; }
+  .ask input { flex: 1; min-width: 0; }
+  pre { background: var(--surface-0); border: 1px solid var(--border); border-radius: 6px; padding: 10px; overflow-x: auto; font-size: 12px; }
+  #tip {
+    position: fixed; pointer-events: none; display: none; background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 12px rgb(0 0 0 / .12);
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Consultant utilization</h1>
+      <p class="sub">Billable hours / capacity (8h &times; working days). Gold layer, refreshed by the daily job.</p>
+    </div>
+    <label class="filters">Week of <select id="week"></select></label>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Utilization by office</h2>
+      <p class="note">Line marks the 75% target.</p>
+      <div class="bars" id="offices" role="list"></div>
+    </section>
+    <section class="card">
+      <h2>Below 50% this week</h2>
+      <p class="note">Candidates for staffing. Bench = no billable hours.</p>
+      <div class="scroll"><table id="bench"></table></div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Engagements, all period</h2>
+    <div class="scroll"><table id="engagements"></table></div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Ask the data</h2>
+    <p class="note">Claude writes one read-only SQL query over the gold tables; the app validates and runs it. Needs ANTHROPIC_API_KEY.</p>
+    <form class="ask" id="ask-form">
+      <input id="question" placeholder="Which Madrid consultants were below 60% in the last two weeks?" aria-label="Question">
+      <button type="submit">Ask</button>
+    </form>
+    <div id="answer"></div>
+  </section>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const pct = (x) => `${Math.round(x * 100)}%`;
+const usd = (x) => x == null ? "—" : x.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const get = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(r.statusText); return r.json(); });
+
+const tip = $("tip");
+function showTip(e, html) { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = `${e.clientX + 12}px`; tip.style.top = `${e.clientY + 12}px`; }
+function hideTip() { tip.style.display = "none"; }
+
+function renderOffices(rows) {
+  const max = Math.max(1, ...rows.map((r) => r.utilization));
+  $("offices").innerHTML = rows.map((r, i) => `
+    <div class="bar-row" role="listitem" data-i="${i}">
+      <span class="bar-label">${esc(r.office)}</span>
+      <span class="track">
+        <span class="fill" style="width:${(r.utilization / max) * 100}%"></span>
+        <span class="target" style="left:${(0.75 / max) * 100}%"></span>
+      </span>
+      <span class="bar-value">${pct(r.utilization)}</span>
+    </div>`).join("");
+  $("offices").querySelectorAll(".bar-row").forEach((el) => {
+    const r = rows[el.dataset.i];
+    el.addEventListener("mousemove", (e) => showTip(e,
+      `<b>${esc(r.office)}</b><br>${pct(r.utilization)} utilization<br>${r.billable_hours} of ${r.capacity_hours} h billable<br>${r.headcount} people, ${r.bench_count} on bench`));
+    el.addEventListener("mouseleave", hideTip);
+  });
+}
+
+function table(el, cols, rows) {
+  el.innerHTML = `<thead><tr>${cols.map((c) => `<th class="${c.num ? "num" : ""}">${c.label}</th>`).join("")}</tr></thead>
+    <tbody>${rows.length ? rows.map((r) => `<tr>${cols.map((c) => `<td class="${c.num ? "num" : ""}">${c.fmt ? c.fmt(r[c.key], r) : esc(r[c.key])}</td>`).join("")}</tr>`).join("")
+      : `<tr><td colspan="${cols.length}">Nobody below 50%.</td></tr>`}</tbody>`;
+}
+
+async function loadWeek(week) {
+  const [offices, low] = await Promise.all([
+    get(`/api/offices?week=${week}`),
+    get(`/api/consultants?week=${week}&below=0.5`),
+  ]);
+  renderOffices(offices);
+  table($("bench"), [
+    { key: "employee_id", label: "Consultant" },
+    { key: "office", label: "Office" },
+    { key: "level", label: "Level" },
+    { key: "utilization", label: "Util.", num: true, fmt: pct },
+    { key: "is_bench", label: "", fmt: (v) => v ? `<span class="flag">&#9888; Bench</span>` : "" },
+  ], low);
+}
+
+async function init() {
+  const weeks = await get("/api/weeks");
+  $("week").innerHTML = weeks.map((w) => `<option>${w}</option>`).join("");
+  $("week").addEventListener("change", (e) => loadWeek(e.target.value));
+  await loadWeek(weeks[0]);
+  table($("engagements"), [
+    { key: "engagement_code", label: "Code" },
+    { key: "client_name", label: "Client" },
+    { key: "billing_type", label: "Type" },
+    { key: "consultants", label: "People", num: true },
+    { key: "hours", label: "Hours", num: true, fmt: (v) => Math.round(v) },
+    { key: "billable_value_usd", label: "Value (USD)", num: true, fmt: usd },
+    { key: "unpriced_hours", label: "", fmt: (v) => v > 0 ? `<span class="flag">&#9888; ${v} h without rate card</span>` : "" },
+  ], await get("/api/engagements"));
+}
+
+$("ask-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const out = $("answer");
+  out.innerHTML = `<p class="note">Thinking…</p>`;
+  const res = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: $("question").value }) });
+  const body = await res.json();
+  if (!res.ok) { out.innerHTML = `<p class="flag">${esc(body.detail)}</p>`; return; }
+  const cols = body.columns.map((c) => ({ key: c, label: esc(c) }));
+  out.innerHTML = `<p>${esc(body.explanation)}</p>${body.sql ? `<pre>${esc(body.sql)}</pre>` : ""}<div class="scroll"><table id="ask-table"></table></div>`;
+  if (body.sql) table($("ask-table"), cols, body.rows);
+});
+
+init().catch((err) => { document.querySelector("main").insertAdjacentHTML("beforeend", `<p class="flag">Could not load data: ${esc(err.message)}. Run the pipeline first.</p>`); });
+</script>
+</body>
+</html>

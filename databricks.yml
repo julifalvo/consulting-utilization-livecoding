@@ -1,0 +1,55 @@
+# Databricks Asset Bundle: the *workload* (wheel, job, app) as code.
+# The *platform* it runs on (schemas, landing volume, grants, SQL warehouse) is Terraform:
+# see infra/terraform and docs/adr/0002-terraform-for-platform-bundles-for-workloads.md
+#
+# Auth comes from the environment (DATABRICKS_HOST + a profile, PAT or GitHub OIDC):
+#   databricks bundle validate -t dev
+#   databricks bundle deploy   -t dev      # isolated copy, prefixed "[dev <user>]"
+#   databricks bundle run utilization_daily -t dev
+
+bundle:
+  name: consultant-utilization
+
+include:
+  - resources/*.yml
+
+artifacts:
+  utilization_wheel:
+    type: whl
+    build: uv build --wheel
+    path: .
+
+variables:
+  catalog:
+    description: Unity Catalog catalog holding the raw/bronze/silver/gold schemas
+  warehouse_id:
+    description: SQL warehouse the app queries (Terraform output `warehouse_id`)
+  alert_email:
+    description: who hears about failed runs and data-quality errors
+    default: data-platform-oncall@example.com
+  service_principal:
+    description: application id of the service principal that runs prod
+    default: 00000000-0000-0000-0000-000000000000
+
+targets:
+  dev:
+    mode: development  # resources prefixed per user, schedules paused
+    default: true
+    variables:
+      catalog: dev
+      warehouse_id: replace-with-dev-warehouse-id
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    run_as:
+      service_principal_name: ${var.service_principal}
+    variables:
+      catalog: prod
+      warehouse_id: replace-with-prod-warehouse-id
+    permissions:
+      - group_name: data-engineering
+        level: CAN_MANAGE
+      - group_name: staffing-analysts
+        level: CAN_VIEW

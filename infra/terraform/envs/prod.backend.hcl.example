@@ -1,0 +1,4 @@
+resource_group_name  = "rg-data-platform-tfstate"
+storage_account_name = "stdataplatformtfstate"
+container_name       = "tfstate"
+key                  = "utilization/prod.tfstate"

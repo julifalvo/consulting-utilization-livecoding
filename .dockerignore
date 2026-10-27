@@ -1,0 +1,8 @@
+.venv
+lakehouse
+spark-warehouse
+.git
+**/__pycache__
+.pytest_cache
+.ruff_cache
+infra/terraform/.terraform

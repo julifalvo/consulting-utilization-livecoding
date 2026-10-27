@@ -1,0 +1,22 @@
+services:
+  # Dev shell / test runner (Linux + Java 17):  docker compose run --rm dev pytest
+  dev:
+    build: .
+    image: utilization-dev:local
+    volumes:
+      - .:/workspace
+    command: bash
+
+  # Runs the pipeline into ./lakehouse, then serves the app on http://localhost:8000
+  app:
+    image: utilization-dev:local
+    build: .
+    volumes:
+      - .:/workspace
+    ports:
+      - "8000:8000"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    command: >
+      bash -c "utilization run --stage all --landing data/raw --lakehouse lakehouse
+      && uvicorn dashboard.main:app --app-dir app --host 0.0.0.0 --port 8000"

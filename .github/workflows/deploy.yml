@@ -1,0 +1,36 @@
+name: Deploy
+
+# PRs deploy nothing. Merging to main deploys the bundle to prod; the dev target is for
+# engineers' own `databricks bundle deploy` runs. Skipped entirely until the repository has
+# a DATABRICKS_HOST variable, so forks and the public portfolio copy stay green.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false  # never interrupt a half-finished deploy
+
+permissions:
+  contents: read
+  id-token: write  # GitHub OIDC -> Databricks workload identity federation, no stored token
+
+jobs:
+  deploy:
+    if: ${{ vars.DATABRICKS_HOST != '' }}
+    runs-on: ubuntu-latest
+    environment: prod  # required reviewers are configured on the environment
+    env:
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: databricks/setup-cli@main
+      - run: databricks bundle validate -t prod
+      - run: >
+          databricks bundle deploy -t prod
+          --var="warehouse_id=${{ vars.DATABRICKS_WAREHOUSE_ID }}"
+          --var="service_principal=${{ vars.DATABRICKS_CLIENT_ID }}"

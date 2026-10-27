@@ -1,0 +1,18 @@
+# Lightweight web app on Databricks Apps. It runs as its own service principal; Terraform
+# grants that principal SELECT on <catalog>.gold only (never silver: it holds PII).
+resources:
+  apps:
+    utilization_app:
+      name: consultant-utilization
+      description: Weekly consultant utilization, bench report and ask-the-data
+      source_code_path: ../app
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+        - name: anthropic-api-key
+          secret:
+            scope: utilization-app
+            key: anthropic-api-key
+            permission: READ
